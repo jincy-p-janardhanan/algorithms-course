@@ -1,22 +1,21 @@
 import edu.princeton.cs.algs4.StdOut;
-
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 public class Deque<Item> implements Iterable<Item> {
-    private Item[] deque;
+    private Node first;
+    private Node last;
     private int length;
-    private int capacity;
-    private int first;
-    private int last;
 
     // construct an empty deque
     public Deque() {
-        deque = (Item[]) (new Object[0]);
+        first = last = null;
         length = 0;
-        capacity = 0;
-        first = -1;
-        last = -1;
+    }
+
+    private class Node {
+        Item item;
+        Node next;
     }
 
     // unit testing (required)
@@ -67,62 +66,27 @@ public class Deque<Item> implements Iterable<Item> {
         return length;
     }
 
-    private void resize() {
-        Item[] copy = (Item[]) (new Object[capacity]);
-        int count = 0;
-        int i = first;
-        int j = capacity - length + 1;
-        if (copy.length < deque.length) {
-            j--;
-            length++;
-        }
-        first = j;
-        while (count < length - 1) {
-            copy[j++] = deque[i++];
-            if (i == deque.length) i = 0;
-            if (j == copy.length) j = 0;
-            count++;
-        }
-        if (copy.length < deque.length) length--;
-        last = j - 1;
-        if (last == -1) last = capacity - 1;
-        deque = copy;
-    }
-
     // add the item to the front
     public void addFirst(Item item) {
         if (item == null) throw new IllegalArgumentException();
+        Node oldFirst = first;
+        first = new Node();
+        first.item = item;
+        first.next = oldFirst;
+        if (length == 0) last = first;
         length++;
-        if (length >= capacity) {
-            if (capacity == 0) capacity = 2;
-            else capacity *= 2;
-            resize();
-        }
-        if (first == 0 && length != capacity) {
-            if (length == 3) {
-                deque[capacity - 1] = deque[last];
-                last = capacity - 1;
-            }
-            deque[last - 1] = deque[first];
-            first = last - 1;
-        }
-        deque[--first] = item;
-        if (length == 1) last = first;
     }
 
     // add the item to the back
     public void addLast(Item item) {
         if (item == null) throw new IllegalArgumentException();
+        Node oldLast = last;
+        last = new Node();
+        last.item = item;
+        last.next = null;
+        oldLast.next = last;
+        if (length == 0) first = last;
         length++;
-        if (length >= capacity) {
-            if (capacity == 0) capacity = 2;
-            else capacity *= 2;
-            resize();
-        }
-        last++;
-        if (last == capacity) last = 0;
-        deque[last] = item;
-        if (length == 1) first = last;
     }
 
     // remove and return the item from the front
@@ -130,14 +94,11 @@ public class Deque<Item> implements Iterable<Item> {
         if (length == 0) {
             throw new NoSuchElementException();
         }
-        Item item = deque[first];
-        deque[first++] = null;
-        if (first == capacity) first = 0;
+
+        Item item = first.item;
+        first = first.next;
         length--;
-        if (length == capacity / 4) {
-            capacity /= 2;
-            resize();
-        }
+        if (length == 0) last = null;
         return item;
     }
 
@@ -147,14 +108,13 @@ public class Deque<Item> implements Iterable<Item> {
             throw new NoSuchElementException();
         }
 
-        Item item = deque[last];
-        deque[last--] = null;
-        if (last == -1) last = capacity - 1;
+        Item item = last.item;
+        Node current = first;
+        while ((current.next).next != null) current = current.next;
+        current.next = null;
+        last = current;
         length--;
-        if (length == capacity / 4) {
-            capacity /= 2;
-            resize();
-        }
+        if (length == 0) first = null;
         return item;
     }
 
@@ -165,20 +125,18 @@ public class Deque<Item> implements Iterable<Item> {
 
     private class DequeIterator implements Iterator<Item> {
 
-        private int current = first;
+        private Node current = first;
 
         @Override
         public boolean hasNext() {
-            if (length == 0) return false;
-            return deque[current] != null;
+            return current.next != null;
         }
 
         @Override
         public Item next() {
             if (!hasNext()) throw new NoSuchElementException();
-            Item item = deque[current];
-            current = current + 1;
-            if (current == capacity) current = 0;
+            Item item = current.item;
+            current = current.next;
             return item;
         }
 

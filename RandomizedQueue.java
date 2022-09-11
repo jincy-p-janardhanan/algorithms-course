@@ -12,9 +12,13 @@ public class RandomizedQueue<Item> implements Iterable<Item> {
 
     // construct an empty randomized queue
     public RandomizedQueue() {
-        first = null;
-        last = null;
+        first = last = null;
         length = 0;
+    }
+
+    private class Node {
+        Item item;
+        Node next;
     }
 
     // unit testing (required)
@@ -25,7 +29,8 @@ public class RandomizedQueue<Item> implements Iterable<Item> {
             randomizedQueue.enqueue(i);
             StdOut.printf("%d ", i);
         }
-        StdOut.printf("\nEmpty: %b \nSample element: %d\n", randomizedQueue.isEmpty(), randomizedQueue.sample());
+        StdOut.printf("\nEmpty: %b \nSample element: %d\n",
+                randomizedQueue.isEmpty(), randomizedQueue.sample());
         StdOut.printf("Size: %d \nRandomized queue:\n", randomizedQueue.size());
         for (int i : randomizedQueue) {
             StdOut.printf("%d ", i);
@@ -81,15 +86,15 @@ public class RandomizedQueue<Item> implements Iterable<Item> {
         Node prevNode;
         if (length == 1) {
             item = first.item;
-            first = null;
-            last = null;
-        } else {
+            first = last = null;
+        }
+        else {
             index = StdRandom.uniformInt(length);
             if (index == 0) {
                 item = first.item;
                 first = first.next;
             } else {
-                prevNode = getNodeAtIndex(index - 1);
+                prevNode = getNodeAtIndex(index-1);
                 item = prevNode.next.item;
                 prevNode.next = prevNode.next.next;
                 if (index == length - 1) last = prevNode;
@@ -123,25 +128,26 @@ public class RandomizedQueue<Item> implements Iterable<Item> {
         return new RandomizedQueueIterator();
     }
 
-    private class Node {
-        Item item;
-        Node next;
-    }
-
     private class RandomizedQueueIterator implements Iterator<Item> {
 
-        private final int[] shuffledIndices = StdRandom.permutation(length);
-        private int i = 0;
+        private int count = 0;
+        private final boolean[] visited = new boolean[length];
 
         @Override
         public boolean hasNext() {
-            return i < length;
+            return count != length;
         }
 
         @Override
         public Item next() {
             if (!hasNext()) throw new NoSuchElementException();
-            return getNodeAtIndex(shuffledIndices[i++]).item;
+            int index;
+            do {
+                index = StdRandom.uniformInt(length);
+            } while (visited[index]);
+            visited[index] = true;
+            count++;
+            return getNodeAtIndex(index).item;
         }
 
         @Override
