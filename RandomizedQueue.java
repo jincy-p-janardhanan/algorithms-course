@@ -6,19 +6,19 @@ import java.util.NoSuchElementException;
 
 public class RandomizedQueue<Item> implements Iterable<Item> {
 
-    private Node first;
-    private Node last;
+    private Item[] randQueue;
     private int length;
+    private int capacity;
+    private int first;
+    private int last;
 
     // construct an empty randomized queue
     public RandomizedQueue() {
-        first = last = null;
+        randQueue = (Item[]) (new Object[0]);
         length = 0;
-    }
-
-    private class Node {
-        Item item;
-        Node next;
+        capacity = 0;
+        first = -1;
+        last = -1;
     }
 
     // unit testing (required)
@@ -41,8 +41,8 @@ public class RandomizedQueue<Item> implements Iterable<Item> {
         }
         StdOut.println("\nAdding 6 elements...");
         for (int i = 0; i < 6; i++) {
-            randomizedQueue.enqueue(i);
-            StdOut.printf("%d ", i);
+            randomizedQueue.enqueue(i+10);
+            StdOut.printf("%d ", i+10);
         }
         StdOut.printf("\nEmpty: %b \n", randomizedQueue.isEmpty());
         StdOut.printf("Size: %d \nRandomized queue: \n", randomizedQueue.size());
@@ -66,60 +66,63 @@ public class RandomizedQueue<Item> implements Iterable<Item> {
         return length;
     }
 
+    private void resize() {
+        Item[] copy = (Item[]) (new Object[capacity]);
+        int i;
+        for (i = 0; i < length; i++) {
+            copy[i] = randQueue[(i + first) % randQueue.length];
+        }
+        first = 0;
+        last = i - 1;
+        randQueue = copy;
+    }
+
     // add the item
     public void enqueue(Item item) {
         if (item == null) throw new IllegalArgumentException();
-        Node oldLast = last;
-        last = new Node();
-        last.item = item;
-        last.next = null;
-        if (length == 0) first = last;
-        else oldLast.next = last;
+        if (length + 1 >= capacity) {
+            if (capacity == 0) capacity = 2;
+            else capacity *= 2;
+            resize();
+        }
+        last++;
+        if (last == capacity) last = 0;
+        randQueue[last] = item;
         length++;
+        if (length == 1) first = last;
     }
 
     // remove and return a random item
     public Item dequeue() {
         if (length == 0) throw new NoSuchElementException();
         Item item;
-        int index;
-        Node prevNode;
+        int index = (StdRandom.uniformInt(length) + first) % capacity;
         if (length == 1) {
-            item = first.item;
-            first = last = null;
+            item = randQueue[first];
+            randQueue[first] = null;
+            first = -1;
+            last = -1;
+            length = 0;
+            return item;
         }
-        else {
-            index = StdRandom.uniformInt(length);
-            if (index == 0) {
-                item = first.item;
-                first = first.next;
-            } else {
-                prevNode = getNodeAtIndex(index-1);
-                item = prevNode.next.item;
-                prevNode.next = prevNode.next.next;
-                if (index == length - 1) last = prevNode;
-            }
-        }
+        item = randQueue[index];
+        randQueue[index] = randQueue[first];
+        randQueue[first] = null;
+        first++;
+        if (first == capacity) first = 0;
         length--;
+        if (length <= capacity/4) {
+            capacity /= 2;
+            resize();
+        }
         return item;
     }
 
     // return a random item (but do not remove it)
     public Item sample() {
         if (length == 0) throw new NoSuchElementException();
-        int index = StdRandom.uniformInt(length);
-        return getNodeAtIndex(index).item;
-    }
-
-    private Node getNodeAtIndex(int index) {
-        if (index == 0) return first;
-        Node current = first;
-        int count = 0;
-        while (count < index - 1) {
-            current = current.next;
-            count++;
-        }
-        return (current.next);
+        int index = (StdRandom.uniformInt(length) + first) % capacity;
+        return randQueue[index];
     }
 
     // return an independent iterator over items in random order
@@ -130,24 +133,18 @@ public class RandomizedQueue<Item> implements Iterable<Item> {
 
     private class RandomizedQueueIterator implements Iterator<Item> {
 
-        private int count = 0;
-        private final boolean[] visited = new boolean[length];
+        private final int[] shuffledIndices = StdRandom.permutation(length);
+        private int i = 0;
 
         @Override
         public boolean hasNext() {
-            return count != length;
+            return i < length;
         }
 
         @Override
         public Item next() {
             if (!hasNext()) throw new NoSuchElementException();
-            int index;
-            do {
-                index = StdRandom.uniformInt(length);
-            } while (visited[index]);
-            visited[index] = true;
-            count++;
-            return getNodeAtIndex(index).item;
+            return randQueue[(shuffledIndices[i++] + first) % capacity];
         }
 
         @Override
